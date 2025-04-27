@@ -293,7 +293,9 @@ int ParsedHeader_parse(struct ParsedRequest *pr, char *line)
 
     // Allocate and copy key
     size_t key_len = colon - line;
-    char *key = malloc(key_len + 1);
+  char *key = (char *)malloc(key_len + 1);
+
+
     if (!key)
         return -1;
     strncpy(key, line, key_len);
@@ -301,7 +303,7 @@ int ParsedHeader_parse(struct ParsedRequest *pr, char *line)
 
     // Allocate and copy value
     size_t value_len = line_end - value_start;
-    char *value = malloc(value_len + 1);
+    char *value = (char *)malloc(value_len + 1);
     if (!value)
     {
         free(key);
@@ -667,6 +669,7 @@ int ParsedRequest_parse(struct ParsedRequest *parse, const char *buf,
         free(tmp_buf);
         return ret;
     }
+}
 
     /*
        ParsedRequest Private Methods
