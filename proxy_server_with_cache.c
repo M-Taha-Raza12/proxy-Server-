@@ -473,7 +473,7 @@ cache_element* find(char* url){
 	else {
     printf("\nurl not found\n");
 	}
-	sem_post(&cache_lock);
+	//sem_post(&cache_lock);
     temp_lock_val = pthread_mutex_unlock(&lock);
 	printf("Remove Cache Lock Unlocked %d\n",temp_lock_val); 
     return site;
@@ -518,7 +518,7 @@ int add_cache_element(char* data,int size,char* url){
 	printf("Add Cache Lock Acquired %d\n", temp_lock_val);
     int element_size=size+1+strlen(url)+sizeof(cache_element); // Size of the new element which will be added to the cache
     if(element_size>MAX_ELEMENT_SIZE){
-		sem_post(&cache_lock);
+		//sem_post(&cache_lock);
         // If element size is greater than MAX_ELEMENT_SIZE we don't add the element to the cache
         temp_lock_val = pthread_mutex_unlock(&lock);
 		printf("Add Cache Lock Unlocked %d\n", temp_lock_val);
