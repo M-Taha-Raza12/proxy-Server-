@@ -430,7 +430,6 @@ int ParsedRequest_parse(struct ParsedRequest *parse, const char *buf,
         parse->path = strdup(root_abs_path);
         if (!parse->path)
         {
-            free(tmp_buf);
             free(parse->buf);
             parse->buf = NULL;
             return -1;
