@@ -47,7 +47,7 @@ int port_number = 8080;     // Default Port
 int proxy_socketId;         // socket descriptor of proxy server
 pthread_t tid[MAX_CLIENTS]; // array to store the thread ids of clients
 sem_t seamaphore;           // if client requests exceeds the max_clients this seamaphore puts the
-                  // waiting threads to sleep and wakes them when traffic on queue decreases
+                            // waiting threads to sleep and wakes them when traffic on queue decreases
 // sem_t cache_lock;
 pthread_mutex_t lock; // lock is used for locking the cache
 
@@ -200,7 +200,7 @@ int handle_request(int clientSocket, ParsedRequest *request, char *tempReq)
     {
         bytes_send = send(clientSocket, buf, bytes_send, 0);
 
-        for (int i = 0; i < bytes_send / sizeof(char); i++)
+        for (size_t i = 0; i < bytes_send / sizeof(char); i++)
         {
             temp_buffer[temp_buffer_index] = buf[i];
             printf(BLUE " %c " RESET, buf[i]); // Response Printing
@@ -277,11 +277,11 @@ void *thread_fn(void *socketNew)
 
     printf("--------------------------------------------\n");
     printf(BLUE " %s\n " RESET, buffer);
-    printf("----------------------%d----------------------\n", strlen(buffer));
+    printf("----------------------%zu----------------------\n", strlen(buffer));
 
     char *tempReq = (char *)malloc(strlen(buffer) * sizeof(char) + 1);
     // tempReq, buffer both store the http request sent by client
-    for (int i = 0; i < strlen(buffer); i++)
+    for (size_t i = 0; i < strlen(buffer); i++)
     {
         tempReq[i] = buffer[i];
     }
@@ -307,7 +307,7 @@ void *thread_fn(void *socketNew)
         }
         printf(BLUE " [*] Data retrived from the Cache\n\n" RESET);
         printf(BLUE " %s\n\n" RESET, response);
-        close(socketNew);
+        // close(socketNew);
         sem_post(&seamaphore);
         return NULL;
     }
@@ -472,7 +472,7 @@ cache_element *find(char *url)
 
     // Checks for url in the cache if found returns pointer to the respective cache element or else returns NULL
     cache_element *site = NULL;
-    sem_wait(&cache_lock);
+    // sem_wait(&cache_lock);
     int temp_lock_val = pthread_mutex_lock(&lock);
     printf(BLUE " [*] Remove Cache Lock Acquired %d\n" RESET, temp_lock_val);
     if (head != NULL)
@@ -508,7 +508,7 @@ void remove_cache_element()
     cache_element *p;    // Cache_element Pointer (Prev. Pointer)
     cache_element *q;    // Cache_element Pointer (Next Pointer)
     cache_element *temp; // Cache element to remove
-    sem_wait(&cache_lock);
+    // sem_wait(&cache_lock);
     int temp_lock_val = pthread_mutex_lock(&lock);
     printf(YELLOW " [*] Remove Cache Lock Acquired %d\n" RESET, temp_lock_val);
     if (head != NULL)
@@ -544,7 +544,7 @@ void remove_cache_element()
 int add_cache_element(char *data, int size, char *url)
 {
     // Adds element to the cache
-    sem_wait(&cache_lock);
+    // sem_wait(&cache_lock);
     int temp_lock_val = pthread_mutex_lock(&lock);
     printf(YELLOW " [*] Add Cache Lock Acquired %d\n" RESET, temp_lock_val);
     int element_size = size + 1 + strlen(url) + sizeof(cache_element); // Size of the new element which will be added to the cache
