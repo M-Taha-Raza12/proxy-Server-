@@ -104,7 +104,7 @@ int cache_add(const char *data, int size, const char *url) {
         cache_remove_oldest();
     }
 
-    cache_element *element = (cache_element element*)malloc(sizeof(cache_element));
+    cache_element *element = (cache_element*)malloc(sizeof(cache_element));
     if (!element) {
         pthread_mutex_unlock(&cache.lock);
         return 0;
@@ -212,7 +212,7 @@ void *handle_client(void *arg) {
         send(client_sock, response, bytes_read, 0);
         
         // Cache the response
-        char *temp =(char* temp) realloc(full_response, full_size + bytes_read);
+        char *temp =(char* ) realloc(full_response, full_size + bytes_read);
         if (!temp) break;
         full_response = temp;
         memcpy(full_response + full_size, response, bytes_read);
