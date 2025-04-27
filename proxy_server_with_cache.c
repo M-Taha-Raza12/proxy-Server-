@@ -401,6 +401,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
     printf("Binding on port: %d\n", port_number);
+    printf("Waiting for response....");
 
     // Proxy socket listening to the requests
     int listen_status = listen(proxy_socketId, MAX_CLIENTS);
@@ -438,7 +439,7 @@ int main(int argc, char *argv[])
         struct in_addr ip_addr = client_pt->sin_addr;
         char str[INET_ADDRSTRLEN]; // INET_ADDRSTRLEN: Default ip address size
         inet_ntop(AF_INET, &ip_addr, str, INET_ADDRSTRLEN);
-        printf("Client is connected with port number: %d and ip address: %s \n", ntohs(client_addr.sin_port), str);
+        printf("\n\nClient is connected with port number: %d and ip address: %s \n", ntohs(client_addr.sin_port), str);
         printf("Socket values of index %d in main function is %d\n", i, client_socketId);
         pthread_create(&tid[i], NULL, thread_fn, (void *)&Connected_socketId[i]); // Creating a thread for each client accepted
         i++;
@@ -463,7 +464,7 @@ cache_element *find(char *url)
             if (!strcmp(site->url, url))
             {
                 printf("LRU Time Track Before : %ld", site->lru_time_track);
-                printf("\nurl found\n");
+                printf("\nurl found from cache\n");
                 // Updating the time_track
                 site->lru_time_track = time(NULL);
                 printf("LRU Time Track After : %ld", site->lru_time_track);
@@ -474,7 +475,7 @@ cache_element *find(char *url)
     }
     else
     {
-        printf("\nurl not found\n");
+        printf("\nurl not found from cache\n");
     }
 
     temp_lock_val = pthread_mutex_unlock(&lock);
