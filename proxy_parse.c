@@ -34,7 +34,7 @@ int ParsedHeader_set(struct ParsedRequest *pr, const char *key, const char *valu
 
     if (pr->headerslen <= pr->headersused + 1) {
         size_t new_len = pr->headerslen * 2;
-        struct ParsedHeader *new_headers = realloc(pr->headers, new_len * sizeof(struct ParsedHeader));
+        struct ParsedHeader *new_headers = (struct ParsedHeader*)realloc(pr->headers, new_len * sizeof(struct ParsedHeader));
         if (!new_headers) return -1;
         
         pr->headers = new_headers;
@@ -84,7 +84,7 @@ int ParsedHeader_modify(struct ParsedRequest *pr, const char *key, const char *n
     if (!ph) return 0;
     
     if (ph->valuelen < strlen(newValue) + 1) {
-        char *new_val = realloc(ph->value, strlen(newValue) + 1);
+        char *new_val = (char* ) realloc(ph->value, strlen(newValue) + 1);
         if (!new_val) return 0;
         ph->value = new_val;
         ph->valuelen = strlen(newValue) + 1;
@@ -95,7 +95,7 @@ int ParsedHeader_modify(struct ParsedRequest *pr, const char *key, const char *n
 
 /* ParsedHeader Private Methods */
 static void ParsedHeader_create(struct ParsedRequest *pr) {
-    pr->headers = calloc(DEFAULT_NHDRS, sizeof(struct ParsedHeader));
+    pr->headers = (struct ParsedHeader *)calloc(DEFAULT_NHDRS, sizeof(struct ParsedHeader));
     pr->headerslen = DEFAULT_NHDRS;
     pr->headersused = 0;
 }
@@ -179,11 +179,11 @@ static int ParsedHeader_parse(struct ParsedRequest *pr, char *line) {
 
     // Extract key and value
     size_t key_len = colon - line;
-    char *key = malloc(key_len + 1);
+    char *key = (char* )malloc(key_len + 1);
     if (!key) return -1;
     
     size_t val_len = line_end - value_start;
-    char *value = malloc(val_len + 1);
+    char *value = (char* )malloc(val_len + 1);
     if (!value) {
         free(key);
         return -1;
@@ -211,7 +211,7 @@ void ParsedRequest_destroy(struct ParsedRequest *pr) {
 }
 
 struct ParsedRequest *ParsedRequest_create() {
-    struct ParsedRequest *pr = calloc(1, sizeof(struct ParsedRequest));
+    struct ParsedRequest *pr = (struct ParsedRequest *) calloc(1, sizeof(struct ParsedRequest));
     if (pr) {
         ParsedHeader_create(pr);
     }
@@ -240,7 +240,7 @@ int ParsedRequest_parse(struct ParsedRequest *pr, const char *buf, int buflen) {
         return -1;
     }
 
-    char *tmp_buf = malloc(buflen + 1);
+    char *tmp_buf = (char*)malloc(buflen + 1);
     if (!tmp_buf) return -1;
     memcpy(tmp_buf, buf, buflen);
     tmp_buf[buflen] = '\0';
@@ -312,7 +312,7 @@ int ParsedRequest_parse(struct ParsedRequest *pr, const char *buf, int buflen) {
         pr->path = strdup(root_abs_path);
     } else {
         size_t path_len = strlen(path);
-        pr->path = malloc(strlen(root_abs_path) + path_len + 1);
+        pr->path = (char*)malloc(strlen(root_abs_path) + path_len + 1);
         if (!pr->path) {
             free(tmp_buf);
             return -1;
