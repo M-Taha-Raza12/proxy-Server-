@@ -30,14 +30,14 @@
 
 // typedef struct cache_element cache_element;
 
-// struct cache_element
-// {
-//     char *data;            // data stores response
-//     int len;               // length of data i.e.. sizeof(data)...
-//     char *url;             // url stores the request
-//     time_t lru_time_track; // lru_time_track stores the latest time the element is  accesed
-//     cache_element *next;   // pointer to next element
-// };
+struct cache_element
+{
+    char *data;            // data stores response
+    int len;               // length of data i.e.. sizeof(data)...
+    char *url;             // url stores the request
+    time_t lru_time_track; // lru_time_track stores the latest time the element is  accesed
+    cache_element *next;   // pointer to next element
+};
 
 // cache_element *find(char *url);
 // int add_cache_element(char *data, int size, char *url);
@@ -246,7 +246,7 @@ int handle_request(int clientSocket, ParsedRequest *request, char *tempReq)
     int temp_buffer_size = 0;
     int temp_buffer_index = 0;
 
-    temp_buffer = malloc(MAX_BYTES);
+    temp_buffer = (char*) malloc(MAX_BYTES);
     if (!temp_buffer)
     {
         perror("malloc failed");
@@ -669,5 +669,6 @@ int main(int argc, char *argv[])
             // free(url);
             return 1;
         }
+    }
         return 0;
     }
