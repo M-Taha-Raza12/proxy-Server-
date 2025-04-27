@@ -496,7 +496,7 @@ cache_element *find(char *url)
     {
         printf(YELLOW " \n[*] URL not found in cache\n" RESET);
     }
-    sem_post(&cache_lock);
+    //sem_post(&cache_lock);
     temp_lock_val = pthread_mutex_unlock(&lock);
     printf(YELLOW " [*] Remove Cache Lock (Unlocked) %d\n" RESET, temp_lock_val);
     return site;
@@ -536,7 +536,7 @@ void remove_cache_element()
         free(temp->url); // Free the removed element
         free(temp);
     }
-    sem_post(&cache_lock);
+    //sem_post(&cache_lock);
     temp_lock_val = pthread_mutex_unlock(&lock);
     printf(YELLOW " [*] Remove Cache Lock (Unlocked) %d\n" RESET, temp_lock_val);
 }
@@ -550,7 +550,7 @@ int add_cache_element(char *data, int size, char *url)
     int element_size = size + 1 + strlen(url) + sizeof(cache_element); // Size of the new element which will be added to the cache
     if (element_size > MAX_ELEMENT_SIZE)
     {
-        sem_post(&cache_lock);
+        //sem_post(&cache_lock);
         // If element size is greater than MAX_ELEMENT_SIZE we don't add the element to the cache
         temp_lock_val = pthread_mutex_unlock(&lock);
         printf(YELLOW " [*] Add Cache Lock (unlocked) %d\n" RESET, temp_lock_val);
@@ -578,7 +578,7 @@ int add_cache_element(char *data, int size, char *url)
         cache_size += element_size;
         temp_lock_val = pthread_mutex_unlock(&lock);
         printf(YELLOW " [*] Add Cache Lock (Unlocked) %d\n" RESET, temp_lock_val);
-        sem_post(&cache_lock);
+        //sem_post(&cache_lock);
         free(data);
         printf("--\n");
         free(url);
