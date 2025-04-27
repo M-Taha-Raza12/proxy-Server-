@@ -94,7 +94,7 @@ size_t ParsedRequest_totalLen(struct ParsedRequest *pr);
 /* Length including headers, if any, and the trailing \r\n but excluding the
  * request line.
  */
-size_t ParsedHeader_headersLen(struct ParsedRequest *pr);
+static size_t ParsedHeader_headersLen(struct ParsedRequest *pr);
 
 /* Set, get, and remove null-terminated header keys and values */
 int ParsedHeader_set(struct ParsedRequest *pr, const char *key,
