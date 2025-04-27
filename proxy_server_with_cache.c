@@ -288,7 +288,7 @@ void* thread_fn(void* socketNew)
 		}
 		printf("Data retrived from the Cache\n\n");
 		printf("%s\n\n",response);
-		 close(socketNew);
+		// close(socketNew);
 		 sem_post(&seamaphore);
 		 return NULL;
 	}
@@ -452,7 +452,7 @@ cache_element* find(char* url){
 
 // Checks for url in the cache if found returns pointer to the respective cache element or else returns NULL
     cache_element* site=NULL;
-	sem_wait(&cache_lock);
+	//sem_wait(&cache_lock);
     int temp_lock_val = pthread_mutex_lock(&lock);
 	printf("Remove Cache Lock Acquired %d\n",temp_lock_val); 
     if(head!=NULL){
@@ -484,7 +484,7 @@ void remove_cache_element(){
     cache_element * p ;  	// Cache_element Pointer (Prev. Pointer)
 	cache_element * q ;		// Cache_element Pointer (Next Pointer)
 	cache_element * temp;	// Cache element to remove
-    sem_wait(&cache_lock);
+    //sem_wait(&cache_lock);
     int temp_lock_val = pthread_mutex_lock(&lock);
 	printf("Remove Cache Lock Acquired %d\n",temp_lock_val); 
 	if( head != NULL) { // Cache != empty
@@ -513,7 +513,7 @@ void remove_cache_element(){
 
 int add_cache_element(char* data,int size,char* url){
     // Adds element to the cache
-	 sem_wait(&cache_lock);
+	 //sem_wait(&cache_lock);
     int temp_lock_val = pthread_mutex_lock(&lock);
 	printf("Add Cache Lock Acquired %d\n", temp_lock_val);
     int element_size=size+1+strlen(url)+sizeof(cache_element); // Size of the new element which will be added to the cache
