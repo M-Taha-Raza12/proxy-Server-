@@ -144,7 +144,7 @@ int connectRemoteServer(char *host_addr, int port_num)
         fprintf(stderr, RED " [-] Error in connecting !\n" RESET);
         return -1;
     }
-    free(host_addr);
+   // free(host_addr);
     return remoteSocket;
 }
 
@@ -307,7 +307,7 @@ void *thread_fn(void *socketNew)
         }
         printf(BLUE " [*] Data retrived from the Cache\n\n" RESET);
         printf(BLUE " %s\n\n" RESET, response);
-        // close(socketNew);
+         //close(socketNew);
         sem_post(&seamaphore);
         return NULL;
     }
@@ -554,9 +554,9 @@ int add_cache_element(char *data, int size, char *url)
         // If element size is greater than MAX_ELEMENT_SIZE we don't add the element to the cache
         temp_lock_val = pthread_mutex_unlock(&lock);
         printf(YELLOW " [*] Add Cache Lock (unlocked) %d\n" RESET, temp_lock_val);
-        free(data);
-        printf("--\n");
-        free(url);
+        //free(data);
+        //printf("--\n");
+       // free(url);
         return 0;
     }
     else
@@ -579,9 +579,9 @@ int add_cache_element(char *data, int size, char *url)
         temp_lock_val = pthread_mutex_unlock(&lock);
         printf(YELLOW " [*] Add Cache Lock (Unlocked) %d\n" RESET, temp_lock_val);
         //sem_post(&cache_lock);
-        free(data);
-        printf("--\n");
-        free(url);
+        //free(data);
+       // printf("--\n");
+       // free(url);
         return 1;
     }
     return 0;
