@@ -195,7 +195,7 @@ int handle_request(int clientSocket, ParsedRequest *request, char *tempReq)
         for (size_t i = 0; i < bytes_send / sizeof(char); i++)
         {
             temp_buffer[temp_buffer_index] = buf[i];
-            printf("%c", buf[i]); // Response Printing
+            //printf("%c", buf[i]); // Response Printing
             temp_buffer_index++;
         }
         temp_buffer_size += MAX_BYTES;
