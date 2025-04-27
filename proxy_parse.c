@@ -2,6 +2,11 @@
   proxy_parse.c -- a HTTP Request Parsing Library.
   COS 461
 */
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <stdarg.h>
 
 #include "proxy_parse.h"
 
@@ -221,35 +226,95 @@ void ParsedHeader_destroy(struct ParsedRequest *pr)
     pr->headerslen = 0;
 }
 
+// int ParsedHeader_parse(struct ParsedRequest *pr, char *line)
+// {
+//     char *key;
+//     char *value;
+//     char *index1;
+//     char *index2;
+
+//     index1 = index(line, ':');
+//     // if (index1 == NULL)
+//     // {
+//     //     debug("No colon found\n");
+//     //     return -1;
+//     // }
+
+//   if (index1 == NULL || index1 == line) {  // No colon or empty key
+//     debug("Invalid header format\n");
+//     return -1;
+// }
+
+//   if (index2 == NULL || index2 <= index1 + 2) {
+//     debug("Invalid header value\n");
+//     free(key);
+//     return -1;
+// }
+//     key = (char *)malloc((index1 - line + 1) * sizeof(char));
+//     memcpy(key, line, index1 - line);
+//     key[index1 - line] = '\0';
+
+//     index1 += 2;
+//     index2 = strstr(index1, "\r\n");
+//     value = (char *)malloc((index2 - index1 + 1) * sizeof(char));
+//     memcpy(value, index1, (index2 - index1));
+//     value[index2 - index1] = '\0';
+
+//     ParsedHeader_set(pr, key, value);
+//     free(key);
+//     free(value);
+//     return 0;
+// }
 int ParsedHeader_parse(struct ParsedRequest *pr, char *line)
 {
-    char *key;
-    char *value;
-    char *index1;
-    char *index2;
+    if (!pr || !line)
+        return -1;
 
-    index1 = index(line, ':');
-    if (index1 == NULL)
+    char *colon = strchr(line, ':');
+    if (!colon || colon == line)
     {
-        debug("No colon found\n");
+        debug("Invalid header: missing or empty key\n");
         return -1;
     }
-    key = (char *)malloc((index1 - line + 1) * sizeof(char));
-    memcpy(key, line, index1 - line);
-    key[index1 - line] = '\0';
 
-    index1 += 2;
-    index2 = strstr(index1, "\r\n");
-    value = (char *)malloc((index2 - index1 + 1) * sizeof(char));
-    memcpy(value, index1, (index2 - index1));
-    value[index2 - index1] = '\0';
+    char *value_start = colon + 1;
+    // Skip whitespace after colon
+    while (*value_start == ' ' || *value_start == '\t')
+    {
+        value_start++;
+    }
 
-    ParsedHeader_set(pr, key, value);
+    char *line_end = strstr(line, "\r\n");
+    if (!line_end || value_start >= line_end)
+    {
+        debug("Invalid header: missing value\n");
+        return -1;
+    }
+
+    // Allocate and copy key
+    size_t key_len = colon - line;
+    char *key = malloc(key_len + 1);
+    if (!key)
+        return -1;
+    strncpy(key, line, key_len);
+    key[key_len] = '\0';
+
+    // Allocate and copy value
+    size_t value_len = line_end - value_start;
+    char *value = malloc(value_len + 1);
+    if (!value)
+    {
+        free(key);
+        return -1;
+    }
+    strncpy(value, value_start, value_len);
+    value[value_len] = '\0';
+
+    int result = ParsedHeader_set(pr, key, value);
     free(key);
     free(value);
-    return 0;
+    return result;
 }
-
 /*
   ParsedRequest Public Methods
 */
@@ -352,10 +417,22 @@ int ParsedRequest_parse(struct ParsedRequest *parse, const char *buf,
     char *index;
     char *currentHeader;
 
-    if (parse->buf != NULL)
+    // if (parse->buf != NULL)
+    // {
+    //     debug("parse object already assigned to a request\n");
+    //     return -1;
+    // }
+    if (parse->path == NULL)
     {
-        debug("parse object already assigned to a request\n");
-        return -1;
+        // replace empty abs_path with "/"
+        parse->path = strdup(root_abs_path);
+        if (!parse->path)
+        {
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
     }
 
     if (buflen < MIN_REQ_LEN || buflen > MAX_REQ_LEN)
@@ -383,141 +460,135 @@ int ParsedRequest_parse(struct ParsedRequest *parse, const char *buf,
     {
         parse->buf = (char *)malloc((index - tmp_buf) + 1);
         parse->buflen = (index - tmp_buf) + 1;
-    }
-    memcpy(parse->buf, tmp_buf, index - tmp_buf);
-    parse->buf[index - tmp_buf] = '\0';
-
-    /* Parse request line */
-    parse->method = strtok_r(parse->buf, " ", &saveptr);
-    if (parse->method == NULL)
-    {
-        debug("invalid request line, no whitespace\n");
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        return -1;
-    }
-    if (strcmp(parse->method, "GET"))
-    {
-        debug("invalid request line, method not 'GET': %s\n",
-              parse->method);
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        return -1;
-    }
-
-    full_addr = strtok_r(NULL, " ", &saveptr);
-
-    if (full_addr == NULL)
-    {
-        debug("invalid request line, no full address\n");
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        return -1;
-    }
-
-    parse->version = full_addr + strlen(full_addr) + 1;
-
-    if (parse->version == NULL)
-    {
-        debug("invalid request line, missing version\n");
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        return -1;
-    }
-    if (strncmp(parse->version, "HTTP/", 5))
-    {
-        debug("invalid request line, unsupported version %s\n",
-              parse->version);
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        return -1;
-    }
-
-    parse->protocol = strtok_r(full_addr, "://", &saveptr);
-    if (parse->protocol == NULL)
-    {
-        debug("invalid request line, missing host\n");
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        return -1;
-    }
-
-    const char *rem = full_addr + strlen(parse->protocol) + strlen("://");
-    size_t abs_uri_len = strlen(rem);
-
-    parse->host = strtok_r(NULL, "/", &saveptr);
-    if (parse->host == NULL)
-    {
-        debug("invalid request line, missing host\n");
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        return -1;
-    }
-
-    if (strlen(parse->host) == abs_uri_len)
-    {
-        debug("invalid request line, missing absolute path\n");
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        return -1;
-    }
-
-    parse->path = strtok_r(NULL, " ", &saveptr);
-    if (parse->path == NULL)
-    { // replace empty abs_path with "/"
-        int rlen = strlen(root_abs_path);
-        parse->path = (char *)malloc(rlen + 1);
-        strncpy(parse->path, root_abs_path, rlen + 1);
-    }
-    else if (strncmp(parse->path, root_abs_path, strlen(root_abs_path)) == 0)
-    {
-        debug("invalid request line, path cannot begin "
-              "with two slash characters\n");
-        free(tmp_buf);
-        free(parse->buf);
-        parse->buf = NULL;
-        parse->path = NULL;
-        return -1;
-    }
-    else
-    {
-        // copy parse->path, prefix with a slash
-        char *tmp_path = parse->path;
-        int rlen = strlen(root_abs_path);
-        int plen = strlen(parse->path);
-        parse->path = (char *)malloc(rlen + plen + 1);
-        strncpy(parse->path, root_abs_path, rlen);
-        strncpy(parse->path + rlen, tmp_path, plen + 1);
-    }
-
-    parse->host = strtok_r(parse->host, ":", &saveptr);
-    parse->port = strtok_r(NULL, "/", &saveptr);
-
-    if (parse->host == NULL)
-    {
-        debug("invalid request line, missing host\n");
-        free(tmp_buf);
-        free(parse->buf);
-        free(parse->path);
-        parse->buf = NULL;
-        parse->path = NULL;
-        return -1;
-    }
-
-    if (parse->port != NULL)
-    {
-        int port = strtol(parse->port, (char **)NULL, 10);
-        if (port == 0 && errno == EINVAL)
+        // }
+        // memcpy(parse->buf, tmp_buf, index - tmp_buf);
+        // parse->buf[index - tmp_buf] = '\0';
+        size_t copy_len = index - tmp_buf;
+        if (copy_len >= parse->buflen)
         {
-            debug("invalid request line, bad port: %s\n", parse->port);
+            // Handle error
+        }
+        memcpy(parse->buf, tmp_buf, copy_len);
+        parse->buf[copy_len] = '\0';
+
+        /* Parse request line */
+        parse->method = strtok_r(parse->buf, " ", &saveptr);
+        if (parse->method == NULL)
+        {
+            debug("invalid request line, no whitespace\n");
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
+        if (strcmp(parse->method, "GET"))
+        {
+            debug("invalid request line, method not 'GET': %s\n",
+                  parse->method);
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
+
+        full_addr = strtok_r(NULL, " ", &saveptr);
+
+        if (full_addr == NULL)
+        {
+            debug("invalid request line, no full address\n");
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
+
+        // parse->version = full_addr + strlen(full_addr) + 1;
+        parse->version = saveptr; // After strtok_r for the version
+
+        if (parse->version == NULL)
+        {
+            debug("invalid request line, missing version\n");
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
+        if (strncmp(parse->version, "HTTP/", 5))
+        {
+            debug("invalid request line, unsupported version %s\n",
+                  parse->version);
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
+
+        parse->protocol = strtok_r(full_addr, "://", &saveptr);
+        if (parse->protocol == NULL)
+        {
+            debug("invalid request line, missing host\n");
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
+
+        const char *rem = full_addr + strlen(parse->protocol) + strlen("://");
+        size_t abs_uri_len = strlen(rem);
+
+        parse->host = strtok_r(NULL, "/", &saveptr);
+        if (parse->host == NULL)
+        {
+            debug("invalid request line, missing host\n");
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
+
+        if (strlen(parse->host) == abs_uri_len)
+        {
+            debug("invalid request line, missing absolute path\n");
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            return -1;
+        }
+
+        parse->path = strtok_r(NULL, " ", &saveptr);
+        if (parse->path == NULL)
+        { // replace empty abs_path with "/"
+            int rlen = strlen(root_abs_path);
+            parse->path = (char *)malloc(rlen + 1);
+            strncpy(parse->path, root_abs_path, rlen + 1);
+        }
+        else if (strncmp(parse->path, root_abs_path, strlen(root_abs_path)) == 0)
+        {
+            debug("invalid request line, path cannot begin "
+                  "with two slash characters\n");
+            free(tmp_buf);
+            free(parse->buf);
+            parse->buf = NULL;
+            parse->path = NULL;
+            return -1;
+        }
+        else
+        {
+            // copy parse->path, prefix with a slash
+            char *tmp_path = parse->path;
+            int rlen = strlen(root_abs_path);
+            int plen = strlen(parse->path);
+            parse->path = (char *)malloc(rlen + plen + 1);
+            strncpy(parse->path, root_abs_path, rlen);
+            strncpy(parse->path + rlen, tmp_path, plen + 1);
+        }
+
+        parse->host = strtok_r(parse->host, ":", &saveptr);
+        parse->port = strtok_r(NULL, "/", &saveptr);
+
+        if (parse->host == NULL)
+        {
+            debug("invalid request line, missing host\n");
             free(tmp_buf);
             free(parse->buf);
             free(parse->path);
@@ -525,94 +596,139 @@ int ParsedRequest_parse(struct ParsedRequest *parse, const char *buf,
             parse->path = NULL;
             return -1;
         }
-    }
 
-    /* Parse headers */
-    int ret = 0;
-    currentHeader = strstr(tmp_buf, "\r\n") + 2;
-    while (currentHeader[0] != '\0' &&
-           !(currentHeader[0] == '\r' && currentHeader[1] == '\n'))
-    {
+        // if (parse->port != NULL)
+        // {
+        //     int port = strtol(parse->port, (char **)NULL, 10);
+        //     if (port == 0 && errno == EINVAL)
+        //     {
+        //         debug("invalid request line, bad port: %s\n", parse->port);
+        //         free(tmp_buf);
+        //         free(parse->buf);
+        //         free(parse->path);
+        //         parse->buf = NULL;
+        //         parse->path = NULL;
+        //         return -1;
+        //     }
+        //}
 
-        // debug("line %s %s", parse->version, currentHeader);
-
-        if (ParsedHeader_parse(parse, currentHeader))
+        if (parse->port != NULL)
         {
-            ret = -1;
-            break;
+            char *endptr;
+            long port = strtol(parse->port, &endptr, 10);
+            if (*endptr != '\0' || port < 1 || port > 65535)
+            {
+                debug("invalid port number: %s\n", parse->port);
+                free(tmp_buf);
+                free(parse->buf);
+                free(parse->path);
+                parse->buf = NULL;
+                parse->path = NULL;
+                return -1;
+            }
         }
 
-        currentHeader = strstr(currentHeader, "\r\n");
-        if (currentHeader == NULL || strlen(currentHeader) < 2)
-            break;
+        // Add version validation:
+        if (strncmp(parse->version, "HTTP/", 5) == 0)
+        {
+            double version = strtod(parse->version + 5, NULL);
+            if (version < 1.0 || version > 1.1)
+            {
+                debug("unsupported HTTP version: %s\n", parse->version);
+                // Cleanup and return error
+                free(parse->buf);
+                free(parse->path);
+                parse->buf = NULL;
+                parse->path = NULL;
+                return -1;
+            }
+        }
+        /* Parse headers */
+        int ret = 0;
+        currentHeader = strstr(tmp_buf, "\r\n") + 2;
+        while (currentHeader[0] != '\0' &&
+               !(currentHeader[0] == '\r' && currentHeader[1] == '\n'))
+        {
 
-        currentHeader += 2;
+            // debug("line %s %s", parse->version, currentHeader);
+
+            if (ParsedHeader_parse(parse, currentHeader))
+            {
+                ret = -1;
+                break;
+            }
+
+            currentHeader = strstr(currentHeader, "\r\n");
+            if (currentHeader == NULL || strlen(currentHeader) < 2)
+                break;
+
+            currentHeader += 2;
+        }
+        free(tmp_buf);
+        return ret;
     }
-    free(tmp_buf);
-    return ret;
-}
 
-/*
-   ParsedRequest Private Methods
-*/
+    /*
+       ParsedRequest Private Methods
+    */
 
-size_t ParsedRequest_requestLineLen(struct ParsedRequest *pr)
-{
-    if (!pr || !pr->buf)
-        return 0;
-
-    size_t len =
-        strlen(pr->method) + 1 + strlen(pr->protocol) + 3 +
-        strlen(pr->host) + 1 + strlen(pr->version) + 2;
-    if (pr->port != NULL)
+    size_t ParsedRequest_requestLineLen(struct ParsedRequest * pr)
     {
-        len += strlen(pr->port) + 1;
+        if (!pr || !pr->buf)
+            return 0;
+
+        size_t len =
+            strlen(pr->method) + 1 + strlen(pr->protocol) + 3 +
+            strlen(pr->host) + 1 + strlen(pr->version) + 2;
+        if (pr->port != NULL)
+        {
+            len += strlen(pr->port) + 1;
+        }
+        /* path is at least a slash */
+        len += strlen(pr->path);
+        return len;
     }
-    /* path is at least a slash */
-    len += strlen(pr->path);
-    return len;
-}
 
-int ParsedRequest_printRequestLine(struct ParsedRequest *pr,
-                                   char *buf, size_t buflen,
-                                   size_t *tmp)
-{
-    char *current = buf;
-
-    if (buflen < ParsedRequest_requestLineLen(pr))
+    int ParsedRequest_printRequestLine(struct ParsedRequest * pr,
+                                       char *buf, size_t buflen,
+                                       size_t *tmp)
     {
-        debug("not enough memory for first line\n");
-        return -1;
-    }
-    memcpy(current, pr->method, strlen(pr->method));
-    current += strlen(pr->method);
-    current[0] = ' ';
-    current += 1;
+        char *current = buf;
 
-    memcpy(current, pr->protocol, strlen(pr->protocol));
-    current += strlen(pr->protocol);
-    memcpy(current, "://", 3);
-    current += 3;
-    memcpy(current, pr->host, strlen(pr->host));
-    current += strlen(pr->host);
-    if (pr->port != NULL)
-    {
-        current[0] = ':';
+        if (buflen < ParsedRequest_requestLineLen(pr))
+        {
+            debug("not enough memory for first line\n");
+            return -1;
+        }
+        memcpy(current, pr->method, strlen(pr->method));
+        current += strlen(pr->method);
+        current[0] = ' ';
         current += 1;
-        memcpy(current, pr->port, strlen(pr->port));
-        current += strlen(pr->port);
+
+        memcpy(current, pr->protocol, strlen(pr->protocol));
+        current += strlen(pr->protocol);
+        memcpy(current, "://", 3);
+        current += 3;
+        memcpy(current, pr->host, strlen(pr->host));
+        current += strlen(pr->host);
+        if (pr->port != NULL)
+        {
+            current[0] = ':';
+            current += 1;
+            memcpy(current, pr->port, strlen(pr->port));
+            current += strlen(pr->port);
+        }
+        /* path is at least a slash */
+        memcpy(current, pr->path, strlen(pr->path));
+        current += strlen(pr->path);
+
+        current[0] = ' ';
+        current += 1;
+
+        memcpy(current, pr->version, strlen(pr->version));
+        current += strlen(pr->version);
+        memcpy(current, "\r\n", 2);
+        current += 2;
+        *tmp = current - buf;
+        return 0;
     }
-    /* path is at least a slash */
-    memcpy(current, pr->path, strlen(pr->path));
-    current += strlen(pr->path);
-
-    current[0] = ' ';
-    current += 1;
-
-    memcpy(current, pr->version, strlen(pr->version));
-    current += strlen(pr->version);
-    memcpy(current, "\r\n", 2);
-    current += 2;
-    *tmp = current - buf;
-    return 0;
-}
