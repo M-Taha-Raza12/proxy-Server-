@@ -391,5 +391,5 @@ This project is currently unlicensed. To add a license:
 
 ---
 
-**Last Updated**: 2026-04-26  
+**Last Updated**: 2025-04-28  
 **Repository**: [M-Taha-Raza12/proxy-Server-](https://github.com/M-Taha-Raza12/proxy-Server-)
